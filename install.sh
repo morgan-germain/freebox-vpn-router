@@ -1,71 +1,77 @@
 #!/bin/sh
 
-NORDVPN_LOGIN='pouet'
-NORDVPN_PASSWORD='pouetpouet'
+IP_ADDRESS='192.168.1.1'
+
+NORDVPN_LOGIN='todo'
+NORDVPN_PASSWORD='todo'
 
 # Install dependencies
-sudo apt install -y ca-certificates curl jq openvpn unzip
+sudo apt install -y \
+  ca-certificates \
+  curl \
+  iptables-persistent \
+  isc-dhcp-server \
+  jq \
+  netfilter-persistent \
+  openvpn \
+  unzip
+
+# Faster boot times
+echo 'Disabling GRUB prompt timeout...'
+sudo sed -i '/GRUB_TIMEOUT/s/5$/0/g' /etc/default/grub
+sudo upgate-grub
 
 ### NordVPN connection
 
 # Set NordVPN credentials
-sudo tee /etc/openvpn/auth.secret << EOF
+echo 'Configuring NordVPN connection...'
+sudo tee /etc/openvpn/auth.secret > /dev/null << EOF
 ${NORDVPN_LOGIN}
 ${NORDVPN_PASSWORD}
 EOF
 
 # Retrieve list of servers
-curl --output=/tmp/ovpn.zip https://downloads.nordcdn.com/configs/archives/servers/ovpn.zip
-sudo unzip /tmp/ovpn.zip -d /etc/openvpn
+TMP_FILE='/tmp/ovpn.zip'
+curl --output "${TMP_FILE}" https://downloads.nordcdn.com/configs/archives/servers/ovpn.zip
+sudo unzip "${TMP_FILE}" -d /etc/openvpn
 # Each configuration file should be linked to openvpn credential file
 sudo find /etc/openvpn -name '*.ovpn' \
     -type f \
     -exec sed -i 's/^auth-user-pass$/auth-user-pass \/etc\/openvpn\/auth.secret/' {} \;
 
 # Detect the best server
-./chose-server.sh
-
+echo 'Choosing best NordVPN server...'
+./choose-server.sh
+sudo systemctl start openvpn
 
 ### Routage
+echo 'Becoming an IPv4 router...'
 # Enable routing
-# TODO Morgan : décommenter une ligne avec sed
-sed /etc/sysctl.conf
-#net.ipv4.ip_forward = 1
-
-sudo systcl -p
+sudo sed -i '/net.ipv4.ip_forward=1/s/^#//g' /etc/sysctl.conf
+sudo sysctl -p
+# Enable masquerade
 sudo iptables -t nat -A POSTROUTING -o tun0 -j MASQUERADE
-
-# Save iptable rule
-sudo apt install netfilter-persistent iptables-persistent
 sudo netfilter-persistent save
 
 ### Network configuration
-# TODO Morgan : remplacer la conf DHCP par la conf statique avec sed
-# TODO Morgan : attention, le fichier /etc/network/interfaces.d/50-cloud-init force le DHCP pour eth0
-## The normal eth0
-#allow-hotplug eth0
-#iface eth0 inet dhcp
-#par cette section
-## The normal eth0
-#allow-hotplug eth0
-#iface eth0 inet static
-#  address 192.168.1.1
-#  netmask 255.255.255.0
-#  gateway 192.168.1.254
-#  dns-nameservers 192.168.1.254
+echo "Setting IP address statically as ${IP_ADDRESS}..."
+sudo sed -i '/eth0/s/^/#/g' /etc/network/interfaces
+sudo sed -i '/eth0/s/^/#/g' /etc/network/interfaces.d/50-cloud-init
 
-# TODO Morgan : faut peut-être faire ça a la fin
-sudo systemctl restart networking
+sudo tee /etc/network/interfaces.d/99-static-ip > /dev/null << EOF
+# The normal eth0
+allow-hotplug eth0
+iface eth0 inet static
+  address ${IP_ADDRESS}
+  netmask 255.255.255.0
+  gateway 192.168.1.254
+  dns-nameservers 192.168.1.254
+EOF
 
 ### DHCP Server
+sudo sed -i '/INTERFACESv4/s/""/"eth0"/g' /etc/default/isc-dhcp-server
 
-sudo apt install isc-dhcp-server
-# TODO MGE :
-# Write in /etc/default/isc-dhcp-server
-# INTERFACESv4="eth0"
-
-
-sudo tee /etc/dhcp/dpcpd.conf << EOF
+sudo tee /etc/dhcp/dhcpd.conf > /dev/null << EOF
 option domain-name "morgan.netlib.re";
 option domain-name-servers 8.8.8.8, 8.8.4.4;
 #option domain-name-servers 192.168.1.254;
@@ -74,11 +80,23 @@ subnet 192.168.1.0 netmask 255.255.255.0 {
   range 192.168.1.100 192.168.1.252;
   option subnet-mask 255.255.255.0;
   option broadcast-address 192.168.1.255;
-  option routers 192.168.1.253; # VPN Router
+  option routers 192.168.1.1; # VPN Router
 }
 
 group {
   option routers 192.168.1.254; # Freebox Router (bypass VPN for these devices)
 
+  # Static leases
+  host freebox-player {
+    hardware ethernet 70:FC:8F:60:77:94;
+    fixed-address 192.168.1.2;
+  }
+}
 EOF
-sudo systemctl restart isc-dhcp-server
+
+echo 'You should reboot now with:'
+echo 'sudo systemctl reboot'
+
+# TODO Morgan : faut peut-être faire ça a la fin (ou pas du tout)
+#sudo systemctl restart networking
+
