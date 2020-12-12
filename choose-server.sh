@@ -7,4 +7,8 @@ SERVER="${BEST_SERVER:-fr399.nordvpn.com}"
 
 echo "Selecting server ${SERVER}"
 sudo ln -sf /etc/openvpn/ovpn_tcp/${SERVER}.tcp.ovpn /etc/openvpn/nordvpn.conf
-sudo systemctl reload openvpn.service
+if systemctl --quiet is-active openvpn.service; then
+    sudo systemctl reload openvpn.service
+else
+    sudo systemctl start openvpn.service
+fi

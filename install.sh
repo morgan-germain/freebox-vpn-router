@@ -14,12 +14,13 @@ sudo apt install -y \
   jq \
   netfilter-persistent \
   openvpn \
+  pv \
   unzip
 
 # Faster boot times
 echo 'Disabling GRUB prompt timeout...'
 sudo sed -i '/GRUB_TIMEOUT/s/5$/0/g' /etc/default/grub
-sudo upgate-grub
+sudo update-grub
 
 ### NordVPN connection
 
@@ -33,7 +34,7 @@ EOF
 # Retrieve list of servers
 TMP_FILE='/tmp/ovpn.zip'
 curl --output "${TMP_FILE}" https://downloads.nordcdn.com/configs/archives/servers/ovpn.zip
-sudo unzip "${TMP_FILE}" -d /etc/openvpn
+sudo unzip -o "${TMP_FILE}" -d /etc/openvpn | pv -l -s 11789 > /dev/null
 # Each configuration file should be linked to openvpn credential file
 sudo find /etc/openvpn -name '*.ovpn' \
     -type f \
