@@ -97,7 +97,3 @@ EOF
 
 echo 'You should reboot now with:'
 echo 'sudo systemctl reboot'
-
-# TODO Morgan : faut peut-être faire ça a la fin (ou pas du tout)
-#sudo systemctl restart networking
-
