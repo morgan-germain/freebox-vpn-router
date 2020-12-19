@@ -1,0 +1,19 @@
+server {
+	listen 443 ssl http2;
+	listen [::]:443 ssl http2;
+
+	server_name yuno.morgan.netlib.re *.yuno.morgan.netlib.re;
+
+# TODO MGE: Create Yuno certs
+#	ssl_certificate           /etc/letsencrypt/live/yuno.morgan.netlib.re/fullchain.pem;
+#	ssl_certificate_key       /etc/letsencrypt/live/yuno.morgan.netlib.re/privkey.pem;
+
+	access_log /var/log/nginx/yuno.morgan.netlib.re-access.log;
+	error_log /var/log/nginx/yuno.morgan.netlib.re-error.log;
+
+	location / {
+#		proxy_set_header Host $host;
+		proxy_set_header X-Real-IP $remote_addr;
+		proxy_pass http://192.168.1.8;
+	}
+}
