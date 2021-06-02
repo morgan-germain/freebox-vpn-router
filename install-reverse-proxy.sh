@@ -1,7 +1,7 @@
 #!/bin/sh
 
-NEXTCLOUD_IP='192.168.1.4'
-YUNOHOST_IP='192.168.1.8'
+NEXTCLOUD_IP='192.168.1.8'
+YUNOHOST_IP='192.168.1.4'
 NEXTCLOUD_CERTS='/etc/letsencrypt/live/home.morgan.netlib.re'
 YUNOHOST_CERTS='/etc/letsencrypt/live/yuno.morgan.netlib.re'
 
