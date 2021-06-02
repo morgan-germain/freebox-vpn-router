@@ -95,5 +95,10 @@ group {
 }
 EOF
 
+# Add cron jobs
+printf "$(echo '@reboot /home/freebox/freebox-vpn-router/choose-server.sh')\n" | crontab -
+printf "$(crontab -l ; echo '0 */4 * * * /home/freebox/freebox-vpn-router/choose-server.sh')\n" | crontab -
+
 echo 'You should reboot now with:'
+echo
 echo 'sudo systemctl reboot'
