@@ -56,13 +56,13 @@ sudo netfilter-persistent save
 
 ### Network configuration
 echo "Setting IP address statically as ${IP_ADDRESS}..."
-sudo sed -i '/eth0/s/^/#/g' /etc/network/interfaces
-sudo sed -i '/eth0/s/^/#/g' /etc/network/interfaces.d/50-cloud-init
+sudo sed -i '/enp0s3/s/^/#/g' /etc/network/interfaces
+sudo sed -i '/enp0s3/s/^/#/g' /etc/network/interfaces.d/50-cloud-init
 
 sudo tee /etc/network/interfaces.d/99-static-ip > /dev/null << EOF
-# The normal eth0
-allow-hotplug eth0
-iface eth0 inet static
+# The normal enp0s3
+allow-hotplug enp0s3
+iface enp0s3 inet static
   address ${IP_ADDRESS}
   netmask 255.255.255.0
   gateway 192.168.1.254
@@ -70,7 +70,7 @@ iface eth0 inet static
 EOF
 
 ### DHCP Server
-sudo sed -i '/INTERFACESv4/s/""/"eth0"/g' /etc/default/isc-dhcp-server
+sudo sed -i '/INTERFACESv4/s/""/"enp0s3"/g' /etc/default/isc-dhcp-server
 
 sudo tee /etc/dhcp/dhcpd.conf > /dev/null << EOF
 option domain-name "morgan.netlib.re";
